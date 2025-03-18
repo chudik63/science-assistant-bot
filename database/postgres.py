@@ -17,4 +17,10 @@ class Database:
 
     def execute(self, query, *args):
         self.cursor.execute(query, args)
-        return self.cursor.fetchall()
+        
+        try:
+            res = self.cursor.fetchall()
+        except psycopg.ProgrammingError:
+            return None
+
+        return res
