@@ -1,4 +1,3 @@
-import asyncpg
 import psycopg
 
 class Database:
@@ -16,6 +15,6 @@ class Database:
     def close(self):
         self.cursor.close()
 
-    async def execute(self, query, *args):
-        self.cursor.execute(query)
+    def execute(self, query, *args):
+        self.cursor.execute(query, args)
         return self.cursor.fetchall()
