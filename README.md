@@ -9,9 +9,17 @@ POSTGRES_HOST=localhost
 TELEGRAM_TOKEN=
 ```
 # Commands for developers
-Start postgres:
+Start postgres. Migrations will be applied automatically:
 ```
-make postgres
+make postgres-up
+```
+Stop postgres:
+```
+make postgres-down
+```
+Clear postgres data:
+```
+make postgres-clear
 ```
 Start the bot
 ```
