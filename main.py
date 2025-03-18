@@ -25,11 +25,6 @@ async def main():
 
     dispatcher = Dispatcher(storage=MemoryStorage())
 
-    #dispatcher.include_router(router)
-
-    #dispatcher.update.middleware(UserAuthorizationMiddleware()) 
-    #dispatcher.update.middleware(UserActionLoggerMiddleware())
-
     await set_commands(telegram_bot) 
 
     print("Бот запущен. Ожидаем сообщений...")
