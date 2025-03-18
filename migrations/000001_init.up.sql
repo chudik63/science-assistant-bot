@@ -1,9 +1,9 @@
 create table users (
-  id serial primary key,
+  id bigint primary key,
   username varchar(20) unique not null,
   email text unique not null,
-  password_hash text not null,
-  phone_number text
+  phone_number text,
+  timezone TEXT NOT NULL
 );
 
 create table user_filter_settings (
