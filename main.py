@@ -1,7 +1,9 @@
 import asyncio
 from utils import config
 from database.postgres import Database
-from aiogram import Bot
+from aiogram import Bot, Dispatcher
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import BotCommand
 
 async def set_commands(bot: Bot):
     commands = [
@@ -17,28 +19,24 @@ async def main():
     cfg = config.load()
 
     db = Database(cfg.postgres_db, cfg.postgres_user, cfg.postgres_password, cfg.postgres_host, cfg.postgres_port)
-    
-    db.connect()
 
     # Bot
     telegram_bot = Bot(token=cfg.telegram_token)
 
     dispatcher = Dispatcher(storage=MemoryStorage())
-    scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
 
-    dispatcher.include_router(router)
+    #dispatcher.include_router(router)
 
-    dispatcher.update.middleware(UserAuthorizationMiddleware()) 
-    dispatcher.update.middleware(UserActionLoggerMiddleware())
+    #dispatcher.update.middleware(UserAuthorizationMiddleware()) 
+    #dispatcher.update.middleware(UserActionLoggerMiddleware())
 
     await set_commands(telegram_bot) 
 
-    await dispatcher.start_polling(telegram_bot)
-
     print("Бот запущен. Ожидаем сообщений...")
 
-    db.close()
+    await dispatcher.start_polling(telegram_bot)
 
+    db.close()
 
 if __name__ == "__main__":
     asyncio.run(main())
