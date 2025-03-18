@@ -14,13 +14,14 @@ class Database:
 
     def close(self):
         self.cursor.close()
+        self.connection.close()
 
     def execute(self, query, *args):
         self.cursor.execute(query, args)
-        
         try:
             res = self.cursor.fetchall()
         except psycopg.ProgrammingError:
+            self.connection.commit()
             return None
 
         return res

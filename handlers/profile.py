@@ -20,7 +20,12 @@ class Registration(StatesGroup):
     email = State()
     timezone = State()
 
-class RegistrationHandlers:
+class Edit(StatesGroup):
+    name = State()
+    email = State()
+    timezone = State()
+
+class ProfileHandlers:
     def __init__(self, router: Router, repository: Repository):
         self.router = router
         self.repository = repository
@@ -29,6 +34,8 @@ class RegistrationHandlers:
         self.router.message.register(self.add_name, Registration.name)
         self.router.message.register(self.add_email, Registration.email)
         self.router.callback_query.register(self.add_timezone, Registration.timezone)
+
+        self.router.message.register(self.show_profile, Command('profile'))
 
     async def start_registration(self, message: Message, state: FSMContext):
         user = self.repository.get_user_by_id(message.from_user.id)
@@ -81,4 +88,18 @@ class RegistrationHandlers:
 
         self.repository.add_user(user)
 
-        await callback.message.answer(f"Приятно познакомиться, {data.get('name')}!")
+        await callback.message.answer(f"Приятно познакомиться, {data.get('name')}!\nТеперь предлагаю выбрать тебе настройки поиска. Для этого введи комманду /settings")
+    
+    async def show_profile(self,  message: Message):
+        user_id = message.from_user.id
+
+        user = self.repository.get_user_by_id(user_id)
+
+        profile_text = (
+            f"Ваш профиль:\n"
+            f"Имя: {user.name}\n"
+            f"Почта: {user.email}\n"
+            f"Временная зона: {user.timezone}\n"
+        )
+
+        await message.answer(profile_text)
