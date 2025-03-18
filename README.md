@@ -8,6 +8,11 @@ POSTGRES_HOST=localhost
 
 TELEGRAM_TOKEN=
 ```
+# Installation
+```
+pip install -r requirements.txt
+```
+
 # Commands for developers
 Start postgres. Migrations will be applied automatically:
 ```
