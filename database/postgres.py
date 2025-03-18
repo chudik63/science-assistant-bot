@@ -13,8 +13,8 @@ class Database:
 
         self.cursor = self.connection.cursor()
 
-    async def close(self):
-        await self.cursor.close()
+    def close(self):
+        self.cursor.close()
 
     async def execute(self, query, *args):
         self.cursor.execute(query)

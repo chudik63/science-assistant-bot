@@ -19,6 +19,27 @@ services:
         interval: 10s
         timeout: 5s
         retries: 5
+      
+  migrate:
+      image: migrate/migrate
+      depends_on:
+          postgres:
+              condition: service_healthy
+      env_file: 
+          - .env
+      networks:
+          - bot
+      volumes:
+          - ./migrations:/database/migrations
+      command:
+          [
+              "-path",
+              "/database/migrations/",
+              "-database",
+              "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable",
+              "up",
+          ]
+
 
 networks:
   bot:
