@@ -1,9 +1,8 @@
 create table users (
   id bigint primary key,
-  username varchar(20) unique not null,
+  name varchar(20) unique not null,
   email text unique not null,
-  phone_number text,
-  timezone TEXT NOT NULL
+  timezone text not null
 );
 
 create table user_filter_settings (
