@@ -49,11 +49,19 @@ class SettingsHandlers:
         await message.answer('Введите темы публикаций, которые могут быть вам интересны:')
     
     async def add_topics(self, message: Message, state: FSMContext):
+        if not message.text.isalpha():
+            await message.answer("Пожалуйста, введите корректные темы.")
+            return
+
         await state.update_data(topics=message.text)
         await state.set_state(Settings.types)
         await message.answer('Введите типы публикаций, которые могут быть вам интересны:')
 
     async def add_types(self, message: Message, state: FSMContext):
+        if not message.text.isalpha():
+            await message.answer("Пожалуйста, введите корректные типы.")
+            return
+        
         await state.update_data(types=message.text)
         await state.set_state(Settings.time_interval)
         await message.answer('Введите временной интервал, в течение которго вас интересуют публикации:')
