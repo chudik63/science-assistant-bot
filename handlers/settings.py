@@ -9,6 +9,10 @@ from aiogram.types import CallbackQuery
 from repository.repository import Repository
 from models.models import FilterSettings
 
+sources = [
+    "PubMed", "arXiv"
+]
+
 class Settings(StatesGroup):
     keywords = State()
     authors = State()
@@ -57,17 +61,26 @@ class SettingsHandlers:
     async def add_interval(self, message: Message, state: FSMContext):
         await state.update_data(time_interval=message.text)
         await state.set_state(Settings.sources)
-        await message.answer('Введите источники, которые мне стоит проверять на наличие интересных публикаций:')
+
+        buttons = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text=s, callback_data=s)] for s in sources
+            ]
+        )
+
+        await message.answer('Выберите источники, которые мне стоит проверять на наличие интересных публикаций:', reply_markup=buttons)
     
-    async def add_sources(self, message: Message, state: FSMContext):
-        await state.update_data(sources=message.text)
+    async def add_sources(self, callback: CallbackQuery, state: FSMContext):
+        source = callback.data
+        await state.update_data(sources=source)
+        await callback.message.edit_reply_markup(reply_markup=None)
 
         data = await state.get_data()
         await state.clear()
 
-        settings = FilterSettings(message.from_user.id, data.get("keywords"), data.get("authors"), data.get("topics"), 
+        settings = FilterSettings(callback.from_user.id, data.get("keywords"), data.get("authors"), data.get("topics"), 
                                   data.get("types"), data.get("time_interval"), data.get("sources"))
         
         self.repository.add_filter_settings(settings)
-        await message.answer(f"Ваши предпочтения сохранены!\n")
+        await callback.message.answer(f"Ваши предпочтения сохранены!\n")
     
