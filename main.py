@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher, Router
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 
-from handlers import ProfileHandlers, SettingsHandlers
+from handlers import ProfileHandlers, SettingsHandlers, AgentHandlers
 from repository.repository import Repository
 
 async def set_commands(bot: Bot):
@@ -29,6 +29,7 @@ async def main():
     router = Router()
     ProfileHandlers(router, repository)
     SettingsHandlers(router, repository)
+    AgentHandlers(router)
 
     # Bot
     telegram_bot = Bot(token=cfg.telegram_token)
