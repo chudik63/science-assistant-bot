@@ -8,6 +8,10 @@ class AgentHandlers:
         self.router.message.register(self.call_agent,~F.text.startswith("/"))
         
     async def call_agent(self, message: Message):
+        if message.voice:
+            await message.answer("this message will be transcribed first and then passed to the agent")
+
+            return
         await message.answer("calling agent")
 
  
