@@ -33,3 +33,17 @@ class Repository:
 		"""
 
 		self.db.execute(query, settings.user_id, settings.keywords, settings.authors, settings.topics, settings.types, settings.time_interval, settings.sources)
+	
+	def get_filter_settings(self, user_id: int) -> FilterSettings:
+		query = """
+		SELECT user_id, keywords, authors, topics, types, time_interval, sources FROM user_filter_settings WHERE user_id = %s
+		"""
+
+		res = self.db.execute(query, user_id)
+		if len(res) == 0:
+			return None
+		else:
+			res = res[0]
+	
+		settings = FilterSettings(res[0], res[1], res[2], res[3], res[4], res[5], res[6])
+		return settings

@@ -26,13 +26,35 @@ class SettingsHandlers:
         self.router = router
         self.repository = repository
 
-        self.router.message.register(self.fill_settings, Command('settings'))
+        self.router.message.register(self.show_settings, Command('settings'))
+        self.router.message.register(self.show_settings, Command('edit_settings'))
         self.router.message.register(self.add_keywords, Settings.keywords)
         self.router.message.register(self.add_authors, Settings.authors)
         self.router.message.register(self.add_topics, Settings.topics)
         self.router.message.register(self.add_types, Settings.types)
         self.router.message.register(self.add_interval, Settings.time_interval)
         self.router.message.register(self.add_sources, Settings.sources)
+
+    async def show_settings(self, message: Message):
+        settings = self.repository.get_filter_settings(message.from_user.id)
+        if settings:
+            settings_text = (
+                f"Ваши настройки поиска.\n"
+                f"Ключевые слова: {settings.keywords}\n"
+                f"Авторы: {settings.authors}\n"
+                f"Темы публикаций: {settings.topics}\n"
+                f"Типы публикаций: {settings.types}\n"
+                f"Интервал поиска: {settings.time_interval}\n"
+                f"Источники: {settings.sources}\n"
+                "Чтобы изменить настройки введите /edit_settings"
+            )
+
+            await message.answer(settings_text)
+
+            return
+        
+        await message.answer("Ваши настройки не заданы. Хотите установить? -> /edit_settings")
+
 
     async def fill_settings(self, message: Message, state: FSMContext):
         await state.set_state(Settings.keywords)
