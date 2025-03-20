@@ -7,6 +7,7 @@ POSTGRES_PORT=5432
 POSTGRES_HOST=localhost
 
 TELEGRAM_TOKEN=
+HUGGIN_TOKEN=
 ```
 # Installation
 ```
