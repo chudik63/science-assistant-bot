@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher, Router
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 
+from agent import Agent
 from handlers import ProfileHandlers, SettingsHandlers, AgentHandlers
 from repository.repository import Repository
 
@@ -23,13 +24,16 @@ async def main():
 
     db = Database(cfg.postgres_db, cfg.postgres_user, cfg.postgres_password, cfg.postgres_host, cfg.postgres_port)
 
+    # Agent
+    agent = Agent(cfg.huggin_token)
+
     # Repository & handlers
     repository = Repository(db)
 
     router = Router()
     ProfileHandlers(router, repository)
     SettingsHandlers(router, repository)
-    AgentHandlers(router)
+    AgentHandlers(router, agent)
 
     # Bot
     telegram_bot = Bot(token=cfg.telegram_token)
