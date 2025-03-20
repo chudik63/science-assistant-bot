@@ -15,6 +15,7 @@ async def set_commands(bot: Bot):
         BotCommand(command="/registration", description="Пройти регистрацию"),
         BotCommand(command="/profile", description="Ваши данные"),
         BotCommand(command="/settings", description="Настройки поиска"),
+        BotCommand(command="edit_settings", description="Изменение настроек поиска"),
     ]
     await bot.set_my_commands(commands)
 
