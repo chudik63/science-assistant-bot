@@ -1,6 +1,6 @@
+import logging
 import os
 import yaml
-import re
 from smolagents import ToolCallingAgent, HfApiModel, DuckDuckGoSearchTool
 from langchain_huggingface import HuggingFaceEmbeddings
 
@@ -9,7 +9,9 @@ from agent.tools.pubmed_scrape import scrape_pubmed_pdfs
 from agent.tools.time_tool import get_current_time_in_timezone
 from agent.tools.final_answer_tool import FinalAnswerTool
 
-from agent.utils.translation import translate, tokenizer_russian, model_russian
+from agent.utils.process_markdown import remove_markdown_symbols
+
+# from agent.utils.translation import translate, tokenizer_russian, model_russian
 
 
 class Agent:
@@ -25,7 +27,6 @@ class Agent:
             custom_role_conversions=None
         )
 
-        # Инициализируем Embeddings для упрощенного поиска
         embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
         final_answer = FinalAnswerTool()
@@ -44,7 +45,7 @@ class Agent:
                 get_current_time_in_timezone,
                 search_arxiv,
                 scrape_pubmed_pdfs],
-            max_steps=5,
+            max_steps=7,
             verbosity_level=1,
             grammar=None,
             planning_interval=None,
@@ -57,12 +58,10 @@ class Agent:
         """
         Runs the agent with the given message and returns the result.
         """
-        russian_word_pattern = r'\b[а-яА-ЯёЁ]+\b'
-        matches = re.findall(russian_word_pattern, message)
-        if matches:
-            message = translate(message, tokenizer_russian, model_russian)
         try:
             result = self.agent.run(message)
-            return result.replace("\\n", "\n")
+            logging.info("OK")
+            return remove_markdown_symbols(result.replace("\\n", "\n"))
         except Exception as e:
-            return f"Ошибка запуска агента: {e}"
+            logging.exception(f"An unexpected error occurred: {e}")
+            return f"Произошла ошибка. Повторите попытку чуть позже."

@@ -87,7 +87,7 @@ def search_arxiv(query: str, max_results: int, summarize: bool, sort_by: str = "
         "start": 0,
         "max_results": max_results,
         "sortBy": sort_by,
-        "sortOrder": sort_order  # Use the parameter
+        "sortOrder": sort_order
     }
 
     for attempt in range(5):
@@ -125,12 +125,12 @@ def search_arxiv(query: str, max_results: int, summarize: bool, sort_by: str = "
                 summary_text = summarize_text_article(documents)
             except Exception as e:
                 print(f"Failed to summarize PDF: {e}")
-                summary_text = "Summary unavailable due to processing error."  # Or some default message
-
+                summary_text = "Summary unavailable due to processing error."
+        os.remove(pdf_path)
         entries.append({
             'title': title,
             'pdf_url': pdf_url,
-            'local_pdf_path': pdf_path,
+            # 'local_pdf_path': pdf_path,
             'summary': summary_text
         })
 
