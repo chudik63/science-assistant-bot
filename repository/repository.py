@@ -1,5 +1,5 @@
 from database.postgres import Database
-from models.models import User, FilterSettings
+from models.Classes_for_db import User, FilterSettings
 
 class Repository:
 	def __init__(self, db: Database):
@@ -28,8 +28,8 @@ class Repository:
 	
 	def add_filter_settings(self, settings: FilterSettings):
 		query = """
-		INSERT INTO user_filter_settings (user_id, keywords, authors, topics, types, time_interval, sources) 
-		VALUES(%s, %s, %s, %s, %s, %s, %s)
+		INSERT INTO user_filter_settings (user_id, authors, topics, types, sources, links) 
+		VALUES(%s, %s, %s, %s, %s, %s)
 		"""
 
-		self.db.execute(query, settings.user_id, settings.keywords, settings.authors, settings.topics, settings.types, settings.time_interval, settings.sources)
+		self.db.execute(query, settings.user_id, settings.authors, settings.topics, settings.types, settings.sources, settings.links)

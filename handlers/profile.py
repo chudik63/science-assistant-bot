@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery
 
 from repository.repository import Repository
 from utils.email import valid
-from models.models import User
+from models.Classes_for_db import User
 
 timezones = [
     "Europe/Moscow", "Europe/Samara", "Asia/Yekaterinburg", "Asia/Novosibirsk",
