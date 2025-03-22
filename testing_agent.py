@@ -1,6 +1,6 @@
 from agent import Agent
 
-biba = Agent(token="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")
+biba = Agent(token="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")
 
 while True:
     message = input("Query: ")

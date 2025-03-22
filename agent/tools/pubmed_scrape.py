@@ -33,6 +33,8 @@ def init_driver():
         logging.error(f"Failed to initialize WebDriver: {e}")
         raise
 
+driver = init_driver()
+
 
 def download_pdf_pubmed(url, output_filename, referer_url, cookies):
     headers = {
@@ -59,81 +61,32 @@ def download_pdf_pubmed(url, output_filename, referer_url, cookies):
 @tool
 def scrape_pubmed_pdfs(query: str, start_date: str = None, end_date: str = None, max_articles: int = 5, summarize: bool = True, sort_by: str = "relevance") -> List[Dict]:
     """
-    This tool searches for articles on PubMed Central (PMC) based on a query and optionally generates summaries,
-    with the ability to filter by publication date range.
+    YOU MUST SEND PDF_URL
+
+    This tool searches for articles on PubMed Central (PMC) based on a query and optionally generates summaries.
+
+    PubMed is a free resource supporting the search and retrieval of biomedical and life sciences literature with the aim of improving health–both globally and personally.
 
     This function queries PubMed Central to retrieve scholarly articles matching the provided search query.
-    It supports filtering articles by a specific date range, downloading PDFs of the articles, converting them
-    into vector representations, and generating summaries if requested. The function handles errors gracefully,
-    including retries for network issues and validation of input parameters.
+    It supports filtering articles by a specific date range and generating summaries if requested.
+    The function is designed to handle errors gracefully.
 
     Args:
-        query: str, The search query for finding articles on PubMed Central. This can be a topic, keyword, or phrase
-                     (e.g., "cancer research", "machine learning in biology").
-        start_date: str, Optional start date for filtering articles. Must be in "YYYY/MM/DD" format.
-                      If provided, only articles published on or after this date will be included in the results.
-        end_date: str, Optional end date for filtering articles. Must be in "YYYY/MM/DD" format.
-                    If provided, only articles published on or before this date will be included in the results.
-        max_articles: int, The maximum number of articles to return. Must be between 1 and 5 (inclusive).
-                           This limit ensures manageable processing times and avoids overloading the system.
-        summarize: bool, A flag indicating whether to generate summaries for the retrieved articles. If True,
-                          the function will process the downloaded PDFs to extract and summarize key information.
-        sort_by: str, The sorting criterion for the results. Options are:
-                       - "relevance" (default): Sort by relevance to the query.
-                       - "date": Sort by the publication date in descending order (most recent first).
+        query: str, The search query for finding articles on PubMed Central.
+        start_date: str, Optional start date for filtering articles (YYYY/MM/DD).
+        end_date: str, Optional end date for filtering articles (YYYY/MM/DD).
+        max_articles: int, The maximum number of articles to return (1-5).
+        summarize: bool, A flag indicating whether to generate summaries.
+        sort_by: str, The sorting criterion ("relevance", "date").
 
     Returns:
-        List[Dict]: A list of dictionaries, where each dictionary contains information about the articles found.
-                    Each dictionary contains the following keys:
-            - 'title' (str): The title of the article.
-            - 'link' (str): The URL of the article's page on PubMed Central.
-            - 'pdf_url' (str, optional): The URL of the PDF version of the article.  Only present if the PDF URL was successfully extracted.
-            - 'summary' (str, optional): A summary of the article's content. Only present if `summarize` is True and the summary was successfully generated.  If summary generation fails, this key will not be present.
-            - 'error' (str, optional):  An error message describing any issues encountered while processing this article. Only present if an error occurred.
-
-        If a PDF download or summary generation fails for a specific article, the article will still be included in the
-        list, but it might lack the 'pdf_url' or 'summary' key, and an 'error' key might be present.
+        List[Dict]: A list of dictionaries with article details, including title, link, pdf_url (if available),
+                    summary (if requested), and error (if any).  The agent MUST prioritize returning the 'pdf_url'
+                    whenever possible.
 
     Raises:
-        ValueError: If `max_articles` is not between 1 and 5 (inclusive), if `sort_by` is not one of the allowed values,
-                    or if `start_date` or `end_date` are not in the correct format.
-        RuntimeError: If there are repeated failures in fetching data from PubMed Central after multiple retry attempts.
-
-    Notes:
-        - The function uses Selenium WebDriver to interact with the PubMed Central website and retrieve article links.
-        - PDFs are downloaded into a local "downloads" directory, which is created if it does not already exist.
-        - Summaries are generated using similarity search over vectorized PDF content, followed by text summarization techniques.
-        - If a PDF download fails, the corresponding article is skipped, and an error message is added to the article's dictionary.
-        - Date format must be YYYY/MM/DD.
-        - To avoid deadlocks or performance issues caused by parallelism in the `tokenizers` library, the environment variable
-          `TOKENIZERS_PARALLELISM` is set to `false` internally.
-
-    Example Usage:
-        # Search for articles on "gene editing" between 2020/01/01 and 2021/12/31, sorted by relevance, and generate summaries
-        results = scrape_pubmed_pdfs(query="gene editing", start_date="2020/01/01", end_date="2021/12/31",
-                                     max_articles=3, summarize=True, sort_by="relevance")
-        for result in results:
-            print(f"Title: {result['title']}")
-            print(f"Link: {result['link']}")
-            if 'pdf_url' in result:
-              print(f"PDF URL: {result['pdf_url']}")
-            if 'summary' in result:
-              print(f"Summary: {result['summary']}\n")
-            if 'error' in result:
-              print(f"Error: {result['error']}\n")
-
-        # Search for articles on "CRISPR technology" published after 2022/01/01, sorted by publication date
-        results = scrape_pubmed_pdfs(query="CRISPR technology", start_date="2022/01/01", max_articles=5,
-                                     summarize=False, sort_by="date")
-        for result in results:
-            print(f"Title: {result['title']}")
-            print(f"Link: {result['link']}")
-            if 'pdf_url' in result:
-              print(f"PDF URL: {result['pdf_url']}")
-            if 'summary' in result:
-              print(f"Summary: {result['summary']}\n")
-            if 'error' in result:
-              print(f"Error: {result['error']}\n")
+        ValueError: If `max_articles` is out of range or date formats are incorrect.
+        RuntimeError: If there are repeated failures in fetching data from PubMed Central.
     """
     if not 1 <= max_articles <= 5:
         raise ValueError("`max_articles` must be between 1 and 5 (inclusive).")
@@ -141,7 +94,7 @@ def scrape_pubmed_pdfs(query: str, start_date: str = None, end_date: str = None,
     if sort_by not in ["relevance", "date"]:
         raise ValueError("Неверный параметр сортировки. Допустимые значения: 'relevance' или 'date'.")
 
-    driver = init_driver()
+    # driver = init_driver()
     try:
         sort_param = "" if sort_by == "relevance" else "&sort=pubdate"
         date_filter = ""
@@ -228,5 +181,5 @@ def scrape_pubmed_pdfs(query: str, start_date: str = None, end_date: str = None,
     except Exception as e:
         logging.exception("An unexpected error occurred:")
         raise # Re-raise the exception after logging
-    finally:
-        driver.quit()
+    # finally:
+    #     driver.quit()
