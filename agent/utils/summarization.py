@@ -2,11 +2,26 @@ import re
 from typing import List
 from langchain_core.documents.base import Document
 from transformers import pipeline
+from langchain_huggingface import HuggingFaceEmbeddings
+import torch
 
 # Модель, делающая саммаризацию текста
 # Используем device='cpu', чтобы не было конфликтов при запуске на других ноутах
 # Выгоднее было бы использовать cuda (windows) или mps (macos), но не у всех доступна cuda :(
-summarizer = pipeline(task="summarization", model="facebook/bart-large-cnn", device='cpu')
+device = 'cpu'
+
+if torch.cuda.is_available():
+    device = 'cuda'
+elif torch.mps.is_available():
+    device = 'mps'
+
+model_summary = "facebook/bart-large-cnn"
+model_embedding = "sentence-transformers/all-MiniLM-L6-v2"
+
+summarizer = pipeline(task="summarization", model=model_summary,
+                      device=device)
+
+embedding_model = HuggingFaceEmbeddings(model_name=model_embedding)
 
 
 def summarize_text_article(documents: List[Document],
@@ -36,7 +51,6 @@ def summarize_text_article(documents: List[Document],
         ValueError: If the list of documents is empty or if
         the calculated target length is invalid.
     """
-
     context = "\n".join([re.sub(r'\s+', ' ', doc.page_content).strip() for doc in documents])
     original_length = len(context.split())
     target_length = int(original_length * percent_to_keep)
