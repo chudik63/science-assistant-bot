@@ -69,15 +69,21 @@ class SettingsHandlers:
         await state.update_data(authors=message.text)
         await state.set_state(Settings.topics)
         await message.answer('Введите темы публикаций, которые могут быть вам интересны:')
-    
-    async def add_topics(self, message: Message, state: FSMContext):
-        if not message.text.isalpha():
-            await message.answer("Пожалуйста, введите корректные темы.")
-            return
 
+    async def add_topics(self, message: Message, state: FSMContext):
         await state.update_data(topics=message.text)
         await state.set_state(Settings.types)
-        await message.answer('Введите типы публикаций, которые могут быть вам интересны:')
+
+        buttons = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="Science", callback_data="Science")],
+                [InlineKeyboardButton(text="General research", callback_data="General research")],
+                [InlineKeyboardButton(text="Information", callback_data="Information")],
+                [InlineKeyboardButton(text="Practical and analytical", callback_data="Practical and analytical")]
+            ]
+        )
+
+        await message.answer("Выберите тип публикаций, которые могут быть вам интересны:", reply_markup=buttons)
 
     async def add_types(self, message: Message, state: FSMContext):
         if not message.text.isalpha():
