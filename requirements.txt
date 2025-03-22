@@ -28,6 +28,7 @@ dataclasses-json==0.6.7
 DateTime==5.5
 dbus-python==1.2.18
 decorator==5.2.1
+deep-translator==1.11.4
 defer==1.0.6
 distro==1.7.0
 distro-info==1.1+ubuntu0.2
