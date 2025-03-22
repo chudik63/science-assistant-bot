@@ -1,4 +1,4 @@
-from aiogram import Bot, Router
+from aiogram import Router
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters import Command
 from aiogram.types import Message
@@ -91,8 +91,11 @@ class SettingsHandlers:
         self.is_thinking = False  
         await thinking_task
 
-        await callback.message.answer(result)
-        await callback.message.answer("Как только появятся новинки, я вам обязательно сообщу!")
+        if result == None:
+            await callback.message.answer("Ничего не найдено")
+        else:
+            await callback.message.answer("Как только появятся новинки, я вам обязательно сообщу!")
+         
         await state.clear()
 
     def add_links_for_fav_articles(self, user_id: int, data):
@@ -118,6 +121,9 @@ class SettingsHandlers:
             list_of_links.extend(scrape_pubmed_pdfs_by_type(types, max_articles=2))
             for l in list_of_links:
                 print(f"Links for PubMed: {l}\n")
+        
+        if len(list_of_links) == 0:
+            return None
 
         user_settings_query.links = list_of_links
         
