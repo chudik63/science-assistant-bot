@@ -103,9 +103,7 @@ class SettingsHandlers:
                                              types=types, sources=sources, links=[])
         list_of_dicts_of_links = []
         if sources == "arXiv":
-            list_of_dicts_of_links = brief_search_arxiv(user_settings_query,
-                                                        start_date=date.today().strftime("%Y-%m-%d"),
-                                                        end_date=end_date_str)
+            list_of_dicts_of_links = brief_search_arxiv(user_settings_query)
         else:
 
             '''функция для pubMed'''
