@@ -9,9 +9,9 @@ from aiogram.types import CallbackQuery
 from repository.repository import Repository
 from models.models import FilterSettings
 
-sources = [
-    "PubMed", "arXiv"
-]
+sources = ["PubMed", "arXiv"]
+publication_types = ["Science", "General research", "Information", "Practical and analytical"]
+
 
 class Settings(StatesGroup):
     keywords = State()
@@ -20,6 +20,7 @@ class Settings(StatesGroup):
     types = State()
     time_interval = State()
     sources = State()
+
 
 class SettingsHandlers:
     def __init__(self, router: Router, repository: Repository):
@@ -31,7 +32,7 @@ class SettingsHandlers:
         self.router.message.register(self.add_keywords, Settings.keywords)
         self.router.message.register(self.add_authors, Settings.authors)
         self.router.message.register(self.add_topics, Settings.topics)
-        self.router.message.register(self.add_types, Settings.types)
+        self.router.callback_query.register(self.add_types, Settings.types)  # Изменено
         self.router.message.register(self.add_interval, Settings.time_interval)
         self.router.message.register(self.add_sources, Settings.sources)
 
@@ -48,18 +49,15 @@ class SettingsHandlers:
                 f"Источники: {settings.sources}\n"
                 "Чтобы изменить настройки введите /edit_settings"
             )
-
             await message.answer(settings_text)
-
             return
-        
-        await message.answer("Ваши настройки не заданы. Хотите установить? -> /edit_settings")
 
+        await message.answer("Ваши настройки не заданы. Хотите установить? -> /edit_settings")
 
     async def fill_settings(self, message: Message, state: FSMContext):
         await state.set_state(Settings.keywords)
         await message.answer('Введите ключевые слова, по которым нужно проводить поиск:')
-    
+
     async def add_keywords(self, message: Message, state: FSMContext):
         await state.update_data(keywords=message.text)
         await state.set_state(Settings.authors)
@@ -71,29 +69,30 @@ class SettingsHandlers:
         await message.answer('Введите темы публикаций, которые могут быть вам интересны:')
 
     async def add_topics(self, message: Message, state: FSMContext):
+        if not message.text.isalpha():
+            await message.answer("Пожалуйста, введите корректные темы.")
+            return
+
         await state.update_data(topics=message.text)
         await state.set_state(Settings.types)
 
+        # Клавиатура с типами публикаций
         buttons = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="Science", callback_data="Science")],
-                [InlineKeyboardButton(text="General research", callback_data="General research")],
-                [InlineKeyboardButton(text="Information", callback_data="Information")],
-                [InlineKeyboardButton(text="Practical and analytical", callback_data="Practical and analytical")]
+                [InlineKeyboardButton(text=ptype, callback_data=ptype)] for ptype in publication_types
             ]
         )
 
-        await message.answer("Выберите тип публикаций, которые могут быть вам интересны:", reply_markup=buttons)
+        await message.answer('Выберите тип публикаций:', reply_markup=buttons)
 
-    async def add_types(self, message: Message, state: FSMContext):
-        if not message.text.isalpha():
-            await message.answer("Пожалуйста, введите корректные типы.")
-            return
-        
-        await state.update_data(types=message.text)
+    async def add_types(self, callback: CallbackQuery, state: FSMContext):
+        selected_type = callback.data
+        await state.update_data(types=selected_type)
+        await callback.message.edit_reply_markup(reply_markup=None)
+
         await state.set_state(Settings.time_interval)
-        await message.answer('Введите временной интервал, в течение которго вас интересуют публикации:')
-    
+        await callback.message.answer('Введите временной интервал, в течение которого вас интересуют публикации:')
+
     async def add_interval(self, message: Message, state: FSMContext):
         await state.update_data(time_interval=message.text)
         await state.set_state(Settings.sources)
@@ -104,8 +103,9 @@ class SettingsHandlers:
             ]
         )
 
-        await message.answer('Выберите источники, которые мне стоит проверять на наличие интересных публикаций:', reply_markup=buttons)
-    
+        await message.answer('Выберите источники, которые мне стоит проверять на наличие интересных публикаций:',
+                             reply_markup=buttons)
+
     async def add_sources(self, callback: CallbackQuery, state: FSMContext):
         source = callback.data
         await state.update_data(sources=source)
@@ -114,9 +114,10 @@ class SettingsHandlers:
         data = await state.get_data()
         await state.clear()
 
-        settings = FilterSettings(callback.from_user.id, data.get("keywords"), data.get("authors"), data.get("topics"), 
-                                  data.get("types"), data.get("time_interval"), data.get("sources"))
-        
+        settings = FilterSettings(
+            callback.from_user.id, data.get("keywords"), data.get("authors"), data.get("topics"),
+            data.get("types"), data.get("time_interval"), data.get("sources")
+        )
+
         self.repository.add_filter_settings(settings)
         await callback.message.answer(f"Ваши предпочтения сохранены!\n")
-    
