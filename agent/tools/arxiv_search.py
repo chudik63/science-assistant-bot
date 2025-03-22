@@ -12,7 +12,7 @@ from agent.utils.summarization import summarize_text_article
 
 def brief_search_arxiv(filter_settings: FilterSettings, max_results: int = 5, sort_by: str = "lastUpdatedDate",
                        sort_order: str = "descending",
-                       start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[Dict]:
+                       start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[str]:
     print("In process of finding articles...")
     if not 1 <= max_results <= 5:
         raise ValueError("max_results must be between 1 and 5")
@@ -87,16 +87,97 @@ def brief_search_arxiv(filter_settings: FilterSettings, max_results: int = 5, so
         title = entry.find('{http://www.w3.org/2005/Atom}title').text
         pdf_url = entry.find('{http://www.w3.org/2005/Atom}link[@title="pdf"]').attrib['href']
 
-        entries.append({
-            'title': title,
-            'pdf_url': pdf_url
-        })
+        entries.append(pdf_url)
 
     return entries
 
-kek = brief_search_arxiv(FilterSettings(user_id = "1", authors="John Doe", topics="Physics", types="Science", sources="", links=[]))
-for k in kek:
-    print(f"Вот что мы получили по запросу:{k}\n")
+
+def brief_search_arxiv_by_authors(filter_settings: FilterSettings, max_results: int = 5,
+                                  sort_by: str = "lastUpdatedDate",
+                                  sort_order: str = "descending",  # Added sort_order parameter
+                                  start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[str]:
+    print("In process of finding articles...")
+    # Validate max_results
+    if not 1 <= max_results <= 5:
+        raise ValueError("max_results must be between 1 and 5")
+
+    # Validate sort_by parameter
+    valid_sort_options = {"relevance", "lastUpdatedDate", "submittedDate"}
+    if sort_by not in valid_sort_options:
+        raise ValueError(f"Invalid sort_by value. Must be one of: {', '.join(valid_sort_options)}.")
+
+    # Validate sort_order parameter
+    valid_sort_orders = {"ascending", "descending"}
+    if sort_order not in valid_sort_orders:
+        raise ValueError(f"Invalid sort_order value. Must be one of: {', '.join(valid_sort_orders)}.")
+
+    # Validate date formats
+    if start_date:
+        try:
+            datetime.strptime(start_date, '%Y-%m-%d')
+        except ValueError:
+            raise ValueError("start_date must be in YYYY-MM-DD format")
+    if end_date:
+        try:
+            datetime.strptime(end_date, '%Y-%m-%d')
+        except ValueError:
+            raise ValueError("end_date must be in YYYY-MM-DD format")
+
+    base_url = "http://export.arxiv.org/api/query"
+    search_query = ""
+    if filter_settings.authors:
+        if search_query:
+            search_query += "AND"
+        search_query += f'au:"{filter_settings.authors}"'
+    if start_date and end_date:
+        search_query = f"({search_query} AND submittedDate:[{start_date} TO {end_date}])"
+    elif start_date:
+        # articles from start_date until today
+        search_query = f"({search_query} AND submittedDate:[{start_date} TO TODAY])"
+    elif end_date:
+        # articles from the beginning until end_date
+        search_query = f"({search_query} AND submittedDate:[1991-01-01 TO {end_date}])"
+    print(search_query)
+    params = {
+        "search_query": search_query,
+        "start": 0,
+        "max_results": max_results,
+        "sortBy": sort_by,
+        "sortOrder": sort_order
+    }
+    response = None
+    for attempt in range(5):
+        try:
+            response = requests.get(base_url, params=params)
+            response.raise_for_status()
+            break
+        except (requests.exceptions.RequestException, ConnectionResetError) as e:
+            if attempt < 4:
+                time.sleep(2 ** attempt)
+                continue
+            raise RuntimeError(f"Error fetching data from arXiv after {attempt + 1} attempts: {e}")
+    root = ET.fromstring(response.content)
+    entries = []
+
+    for entry in root.findall('{http://www.w3.org/2005/Atom}entry'):
+        title = entry.find('{http://www.w3.org/2005/Atom}title').text
+        pdf_url = entry.find('{http://www.w3.org/2005/Atom}link[@title="pdf"]').attrib['href']
+
+        entries.append(pdf_url)
+
+    return entries
+
+
+# kek = brief_search_arxiv(
+#     FilterSettings(user_id=1, authors="John Doe", topics="Computer Science", types="Science", sources="", links=[]))
+# for k in kek:
+#     print(f"Вот что мы получили по запросу:{k}\n")
+
+# kek = brief_search_arxiv_by_authors(
+#     FilterSettings(user_id=1, authors="John", topics="Physics", types="Science", sources="", links=[]))
+# for k in kek:
+#     print(f"Вот что мы получили по запросу:{k}\n")
+
 
 @tool
 def search_arxiv(query: str, max_results: int, summarize: bool, sort_by: str = "relevance",

@@ -5,15 +5,16 @@ from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types import CallbackQuery
-from agent.tools.arxiv_search import brief_search_arxiv
+from agent.tools.arxiv_search import brief_search_arxiv, brief_search_arxiv_by_authors
 from repository.repository import Repository
 from models.Classes_for_db import FilterSettings
 from datetime import date
-
+from deep_translator import GoogleTranslator
+from parser.parser import scrape_pubmed_pdfs_by_type, scrape_pubmed_pdfs, scrape_pubmed_pdfs_by_author
 sources = [
     "PubMed", "arXiv"
 ]
-
+publication_types = ["Science", "General research", "Information", "Practical and analytical"]
 
 class Settings(StatesGroup):
     authors = State()
@@ -51,7 +52,13 @@ class SettingsHandlers:
 
         await state.update_data(topics=message.text)
         await state.set_state(Settings.types)
-        await message.answer('Введите типы публикаций, которые могут быть вам интересны:')
+        buttons = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text=ptype, callback_data=ptype)] for ptype in publication_types
+            ]
+        )
+
+        await message.answer('Выберите тип публикаций:', reply_markup=buttons)
 
     async def add_types(self, message: Message, state: FSMContext):
         if not message.text.isalpha():
@@ -88,7 +95,9 @@ class SettingsHandlers:
         data = await state.get_data()
         id_user = message.from_user.id
         authors = data.get("authors")
+        authors_translated_en = GoogleTranslator(source="ru", target="en").translate(authors)
         topics = data.get("topics")
+        topics_translated_en = GoogleTranslator(source="ru", target="en").translate(topics)
         types = data.get("types")
         sources = data.get("sources")
         today = date.today()
@@ -98,22 +107,41 @@ class SettingsHandlers:
             end_date = today.replace(year=today.year - 1, month=today.month + 10)
 
         # Форматируем дату в строку
-        end_date_str = end_date.strftime("%Y-%m-%d")
-        user_settings_query = FilterSettings(user_id=id_user, authors=authors, topics=topics,
+        user_settings_query = FilterSettings(user_id=id_user, authors=authors_translated_en, topics=topics_translated_en,
                                              types=types, sources=sources, links=[])
-        list_of_dicts_of_links = []
+        list_of_links = []
         if sources == "arXiv":
-            list_of_dicts_of_links = brief_search_arxiv(user_settings_query)
-        else:
+            list_of_links = brief_search_arxiv(user_settings_query, max_results=3)
+            list_of_links.extend(brief_search_arxiv_by_authors(user_settings_query, max_results=3))
+            for l in list_of_links:
+                print(f"Links for PubMed: {l}\n")
+        elif sources == "PubMed":
+            list_of_links = scrape_pubmed_pdfs(topics_translated_en, max_articles=3)
+            list_of_links.extend(scrape_pubmed_pdfs_by_author(authors_translated_en, max_articles=3))
+            list_of_links.extend(scrape_pubmed_pdfs_by_type(types, max_articles=2))
 
-            '''функция для pubMed'''
+        user_settings_query = FilterSettings(user_id=id_user, authors=authors_translated_en, topics=topics_translated_en,
+                                             types=types, sources=sources, links=list_of_links)
+        self.repository.add_filter_settings(user_settings_query)
+        if list_of_links:
+            articles_message = "Вот список статей по заданным характеристикам:\n\n"
+            articles_message += "\n".join(list_of_links)
+        else:
+            articles_message = "К сожалению, по вашим параметрам статей не найдено."
+
+            # Отправляем сообщение пользователю
+        await message.answer(articles_message)
+
+        # Очищаем состояние
+        await state.clear()
+        await message.answer("Как только появятся новинки, мы вам обязательно сообщим!")
+
         '''
         надо написать функцию, которая по этим пользовательским данным парсит ссылки по новым с arxiv или pubmed
         далее мы записываем эти ссылки в БД
         Потом мы через apsheduler заново запускаем эти функции парсинга, сверяем ссылки на статьи и если отличается, то присылаем уведомление пользователю 
         о новых статьях в тг или почту.
         '''
-        self.repository.add_filter_settings(settings_with_links)
         '''apscheduler - раз в день будет делать проверку статей База данных с колонкой ссылок, там для каждого 
         пользователя хранится 5 его лобимых статей Apsheduler раз в несколько минут будет запускать arxiv и pubmed 
         парсеры и получать ссылки по предпочтениям пользователя Если он найдёт ссылки, которые будут отличаться от 
