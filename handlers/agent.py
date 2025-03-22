@@ -65,7 +65,7 @@ class AgentHandlers:
     async def process_request(self, text: str, result_queue: asyncio.Queue):
         request = text + "\nIf there is a query linked with article then send the user a pdf_url. It's so important"
         loop = asyncio.get_running_loop()
-        # Запускаем синхронную функцию в executor
+
         res = await loop.run_in_executor(None, self.agent.run_agent, request)
         await result_queue.put(res)
     

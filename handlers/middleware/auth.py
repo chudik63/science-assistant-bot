@@ -31,8 +31,7 @@ class UserAuthorizationMiddleware(BaseMiddleware):
         if state in [Registration.name.state, Registration.email.state, Registration.timezone.state]:
             return await handler(event, data)
 
-        
-        user = await self.repo.get_user_by_id(user_id)
+        user = self.repo.get_user_by_id(user_id)
 
         if not user and not event.message.text.startswith('/registration') and not event.message.text.startswith('/start'):
             await event.message.answer("Вы не зарегистрированы. Пожалуйста, зарегистрируйтесь, чтобы использовать бота.")

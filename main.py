@@ -6,17 +6,17 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from agent import Agent
-from handlers import ProfileHandlers, SettingsHandlers, AgentHandlers
+from handlers import ProfileHandlers, SettingsHandlers, AgentHandlers, UserAuthorizationMiddleware
 from repository.repository import Repository
 from pytz import timezone
 from handlers.apsheduler.apsheduler_db import check_and_send_updates
+
 async def set_commands(bot: Bot):
     commands = [
         BotCommand(command="/start", description="Начать работу с ботом"),
         BotCommand(command="/registration", description="Пройти регистрацию"),
         BotCommand(command="/profile", description="Ваши данные"),
-        BotCommand(command="/settings", description="Настройки поиска"),
-        BotCommand(command="edit_settings", description="Изменение настроек поиска"),
+        BotCommand(command="/search", description="Поиск"),
     ]
     await bot.set_my_commands(commands)
 
@@ -24,7 +24,7 @@ async def main():
     # Infrastructure
     cfg = config.load()
     scheduler = AsyncIOScheduler(timezone=timezone('Europe/Moscow'))
-    scheduler.add_job(check_and_send_updates, "interval", minutes=10)
+
     db = Database(cfg.postgres_db, cfg.postgres_user, cfg.postgres_password, cfg.postgres_host, cfg.postgres_port)
 
     # Agent
@@ -42,6 +42,7 @@ async def main():
     telegram_bot = Bot(token=cfg.telegram_token)
 
     dispatcher = Dispatcher(storage=MemoryStorage())
+    dispatcher.update.middleware(UserAuthorizationMiddleware(repository)) 
     dispatcher.include_router(router)
 
     await set_commands(telegram_bot) 
@@ -49,6 +50,8 @@ async def main():
     print("Бот запущен. Ожидаем сообщений...")
 
     await dispatcher.start_polling(telegram_bot)
+
+    scheduler.add_job(check_and_send_updates, "interval", minutes=10, args=(telegram_bot, repository))
 
     db.close()
 
